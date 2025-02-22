@@ -22,24 +22,25 @@ def generar_documento(fecha, nombre, dni, grado, tipo_documento, año_escolar):
         
         # Reemplazar las marcas de texto con los datos del alumno
         for p in doc.paragraphs:
-            if '[[NOMBRE]]' in p.text:
-                p.text = p.text.replace('[[NOMBRE]]', nombre)
-            if '[[DNI]]' in p.text:
-                p.text = p.text.replace('[[DNI]]', dni)
-            if '[[GRADO]]' in p.text:
-                p.text = p.text.replace('[[GRADO]]', grado)
-            if '[[FECHA]]' in p.text:
-                p.text = p.text.replace('[[FECHA]]', fecha)  # Ahora 'fecha' es un string
-            if '[[AÑO]]' in p.text:
-                p.text = p.text.replace('[[AÑO]]', año_escolar)
+            for run in p.runs:
+                if '[[NOMBRE]]' in run.text:
+                    run.text = run.text.replace('[[NOMBRE]]', nombre)
+                if '[[DNI]]' in run.text:
+                    run.text = run.text.replace('[[DNI]]', dni)
+                if '[[GRADO]]' in run.text:
+                    run.text = run.text.replace('[[GRADO]]', grado)
+                if '[[FECHA]]' in run.text:
+                    run.text = run.text.replace('[[FECHA]]', fecha)
+                if '[[AÑO]]' in run.text:
+                    run.text = run.text.replace('[[AÑO]]', año_escolar)
 
         # Guardar el nuevo documento con un nombre personalizado
         nuevo_nombre = f"{tipo_documento}_{nombre}.docx"
         doc.save(nuevo_nombre)
         return nuevo_nombre
     
-    except FileNotFoundError:
-        return None
+    except Exception as e:
+        return f"Error al generar el documento: {e}"
 
 
 # Crear la interfaz Streamlit
@@ -61,11 +62,19 @@ if st.button('Generar Documento'):
         # Generar documento
         documento = generar_documento(fecha, nombre, dni, grado, doc_tipo, año_escolar)
         
-        if documento:
+        if documento and "Error" not in documento:
             documentos_generados.append(documento)
+        elif "Error" in documento:
+            st.error(documento)
     
     if documentos_generados:
         # Descargar el primer documento generado
-        st.download_button('Descargar Documento', documentos_generados[0], file_name=documentos_generados[0])
+        with open(documentos_generados[0], "rb") as f:
+            st.download_button(
+                label="Descargar Documento",
+                data=f,
+                file_name=documentos_generados[0],
+                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            )
     else:
         st.error('Error al generar el documento.')

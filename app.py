@@ -1,6 +1,7 @@
 import streamlit as st
 import datetime
 from docx import Document
+import os
 
 # Función para generar documento con los datos del alumno
 def generar_documento(fecha, nombre, dni, grado, tipo_documento, año_escolar):
@@ -17,6 +18,10 @@ def generar_documento(fecha, nombre, dni, grado, tipo_documento, año_escolar):
     archivo_template = f"{tipo_documento}.docx"
     
     try:
+        # Verificar si el archivo de plantilla existe
+        if not os.path.exists(archivo_template):
+            raise FileNotFoundError(f"Plantilla '{archivo_template}' no encontrada.")
+        
         # Cargar el documento de plantilla
         doc = Document(archivo_template)
         
@@ -50,31 +55,38 @@ st.title('Generar Documento del Alumno')
 nombre = st.text_input('Nombre:')
 dni = st.text_input('DNI:')
 grado = st.selectbox('Grado:', ['1ro Primaria', '2do Primaria', '3ro Primaria', '4to Primaria', '5to Primaria', '6to Primaria', '1ro Secundaria', '2do Secundaria', '3ro Secundaria', '4to Secundaria', '5to Secundaria'])
-tipo_documento = st.multiselect('Tipo de Documento:', ['Constancia de Estudios', 'Constancia de Notas', 'Constancia de No Adeudamiento'])
+tipo_documento = st.multiselect(
+    'Tipo de Documento:',
+    ['Constancia de Estudios', 'Constancia de Notas', 'Constancia de No Adeudamiento']
+)
 fecha = st.date_input('Fecha:', datetime.date.today())
 año_escolar = st.text_input('Año Escolar:')
 
 # Botón para generar el documento
-if st.button('Generar Documento'):
+if st.button('Generar Documentos'):
     documentos_generados = []
     
-    for doc_tipo in tipo_documento:
-        # Generar documento
-        documento = generar_documento(fecha, nombre, dni, grado, doc_tipo, año_escolar)
-        
-        if documento and "Error" not in documento:
-            documentos_generados.append(documento)
-        elif "Error" in documento:
-            st.error(documento)
-    
-    if documentos_generados:
-        # Descargar el primer documento generado
-        with open(documentos_generados[0], "rb") as f:
-            st.download_button(
-                label="Descargar Documento",
-                data=f,
-                file_name=documentos_generados[0],
-                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-            )
+    if not tipo_documento:
+        st.error("Debe seleccionar al menos un tipo de documento.")
     else:
-        st.error('Error al generar el documento.')
+        for doc_tipo in tipo_documento:
+            # Generar documento
+            documento = generar_documento(fecha, nombre, dni, grado, doc_tipo, año_escolar)
+            
+            if documento and "Error" not in documento:
+                documentos_generados.append(documento)
+            elif "Error" in documento:
+                st.error(documento)
+        
+        if documentos_generados:
+            # Mostrar botones de descarga para cada documento generado
+            for doc in documentos_generados:
+                with open(doc, "rb") as f:
+                    st.download_button(
+                        label=f"Descargar {doc}",
+                        data=f,
+                        file_name=doc,
+                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                    )
+        else:
+            st.error('Error al generar los documentos.')
